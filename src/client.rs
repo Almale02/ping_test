@@ -16,47 +16,46 @@ pub fn main() {
         let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(5)).unwrap();
         println!("connected to server: {}", addr);
 
-        let started_conn = Instant::now();
+        let mut pinging_time = Duration::ZERO;
         let mut ping_count = 0;
+        let mut resp_buffer = [0_u8; 1024];
 
         loop {
             let ping_start = Instant::now();
             match stream.write_all(b"ping req") {
-                Ok(..) => {
-                    let mut resp_buffer = [0_u8; 1024];
-                    match stream.read(&mut resp_buffer) {
-                        Ok(0) => {
-                            eprintln!("server closed");
-                            exit(-1);
-                        }
-                        Ok(buff_len) => {
-                            let data = &resp_buffer[0..buff_len];
-                            if data == b"ping resp" {
-                                ping_count += 1;
-                                let elapsed = ping_start.elapsed();
-                                println!(
-                                    "Ping {:.2}ms, avarage: {}",
-                                    elapsed.as_millis_f32(),
-                                    started_conn.elapsed().as_millis_f32() / ping_count as f32
-                                );
-                            } else {
-                                eprintln!(
-                                    "invalid response from server: {}",
-                                    String::from_utf8_lossy(data)
-                                );
-                            }
-                        }
-                        Err(err) => {
-                            if err.kind() == std::io::ErrorKind::WouldBlock {
-                                eprintln!("response time out");
-                                exit(-1);
-                            } else {
-                                eprintln!("response error: {}", err);
-                                exit(-1);
-                            }
+                Ok(..) => match stream.read(&mut resp_buffer) {
+                    Ok(0) => {
+                        eprintln!("server closed");
+                        exit(-1);
+                    }
+                    Ok(buff_len) => {
+                        let data = &resp_buffer[0..buff_len];
+                        if data == b"ping resp" {
+                            ping_count += 1;
+                            let elapsed = ping_start.elapsed();
+                            pinging_time += elapsed;
+                            println!(
+                                "Ping {:.2}ms, avarage: {}",
+                                elapsed.as_millis_f32(),
+                                pinging_time.as_millis_f32() / ping_count as f32
+                            );
+                        } else {
+                            eprintln!(
+                                "invalid response from server: {}",
+                                String::from_utf8_lossy(data)
+                            );
                         }
                     }
-                }
+                    Err(err) => {
+                        if err.kind() == std::io::ErrorKind::WouldBlock {
+                            eprintln!("response time out");
+                            exit(-1);
+                        } else {
+                            eprintln!("response error: {}", err);
+                            exit(-1);
+                        }
+                    }
+                },
                 Err(e) => {
                     eprintln!("error: {}, failed to send ping, reconnecting...", e);
                     thread::sleep(Duration::from_millis(2000));
