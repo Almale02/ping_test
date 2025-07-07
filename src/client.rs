@@ -16,7 +16,7 @@ pub fn main() {
         let mut stream = TcpStream::connect_timeout(&addr, Duration::from_secs(5)).unwrap();
         println!("connected to server: {}", addr);
 
-        //let started_conn = Instant::now();
+        let started_conn = Instant::now();
         let mut ping_count = 0;
 
         loop {
@@ -34,7 +34,11 @@ pub fn main() {
                             if data == b"ping resp" {
                                 ping_count += 1;
                                 let elapsed = ping_start.elapsed();
-                                println!("Ping {:.2}ms", elapsed.as_millis_f32());
+                                println!(
+                                    "Ping {:.2}ms, avarage: {}",
+                                    elapsed.as_millis_f32(),
+                                    started_conn.elapsed().as_millis_f32() / ping_count as f32
+                                );
                             } else {
                                 eprintln!(
                                     "invalid response from server: {}",
