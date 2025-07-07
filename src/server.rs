@@ -24,7 +24,7 @@ pub fn main() {
                 .set_write_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
 
-            let mut req_buffer = [0_u8; 2048];
+            let mut req_buffer = [0_u8; 1024];
 
             loop {
                 match stream.read(&mut req_buffer) {
@@ -35,7 +35,7 @@ pub fn main() {
                     Ok(req_len) => {
                         let data = &req_buffer[0..req_len];
                         if data == b"ping req" {
-                            match stream.write_all(b"ping response") {
+                            match stream.write_all(b"ping resp") {
                                 Ok(_) => (),
                                 Err(_) => {
                                     eprintln!("failed to send response");
